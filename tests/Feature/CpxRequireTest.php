@@ -1,0 +1,44 @@
+<?php
+
+use Cpx\Cache\ExecSandboxMetadata;
+use Cpx\Cache\Metadata;
+use Cpx\Runtime\CpxRequire;
+
+test('cpx_require installs into a safe sandbox key and records a typed exec entry', function () {
+    $this->useIsolatedComposerHome();
+
+    $calls = [];
+    fakeComposer($calls);
+
+    cpx_require('ugarit/pint');
+
+    $key = hash('sha256', 'ugarit/pint');
+    $sandbox = Metadata::open()->execCache[$key];
+
+    expect(is_dir(cpx_path(".exec_cache/{$key}")))->toBeTrue()
+        ->and($sandbox)->toBeInstanceOf(ExecSandboxMetadata::class)
+        ->and($sandbox->key)->toBe($key)
+        ->and($sandbox->packages)->toBe(['ugarit/pint'])
+        ->and($sandbox->lastRunAt)->not->toBeNull()
+        ->and(file_exists(cpx_path(".exec_cache/{$key}/vendor/autoload.php")))->toBeTrue()
+        ->and($calls)->toHaveCount(1)
+        ->and($calls[0][0])->toBe('require')
+        ->and($calls[0][1])->toBe('ugarit/pint');
+});
+
+test('the hidden sandbox command installs the packages and prints the sandbox path', function () {
+    $this->useIsolatedComposerHome();
+
+    $calls = [];
+    fakeComposer($calls);
+
+    [$status, $output] = runCpxCommand([CpxRequire::COMMAND, 'ugarit/pint']);
+
+    $key = hash('sha256', 'ugarit/pint');
+
+    expect($status)->toBe(0)
+        ->and(trim($output))->toBe(cpx_path(".exec_cache/{$key}"))
+        ->and($calls)->toHaveCount(1)
+        ->and($calls[0][0])->toBe('require')
+        ->and($calls[0][1])->toBe('ugarit/pint');
+});

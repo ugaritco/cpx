@@ -1,0 +1,52 @@
+<?php
+
+use Cpx\Cache\Metadata;
+use Cpx\Packages\Package;
+
+test('a failed install leaves no final dir, no staging residue, and records nothing', function () {
+    $this->useIsolatedComposerHome();
+
+    $calls = [];
+    fakeComposer($calls, exitCode: 1);
+
+    $package = Package::parse('ugarit/pint');
+
+    expect(fn () => $package->installOrUpdatePackage())->toThrow(Exception::class);
+
+    expect(is_dir($package->installPath()))->toBeFalse()
+        ->and(glob(cpx_path('ugarit/pint/*.installing.*')) ?: [])->toBe([])
+        ->and(Metadata::open()->hasPackage('ugarit/pint'))->toBeFalse()
+        ->and($calls)->toHaveCount(1)
+        ->and($calls[0][0])->toBe('require');
+});
+
+test('a successful install atomically populates the final dir and records last_updated', function () {
+    $this->useIsolatedComposerHome();
+
+    $calls = [];
+    fakeComposer($calls);
+
+    $package = Package::parse('ugarit/pint');
+    $package->installOrUpdatePackage();
+
+    expect(file_exists($package->installPath().'/vendor/autoload.php'))->toBeTrue()
+        ->and(glob(cpx_path('ugarit/pint/*.installing.*')) ?: [])->toBe([])
+        ->and(Metadata::open()->packages['ugarit/pint']->lastUpdatedAt)->not->toBeNull();
+});
+
+test('an install dir missing the autoloader is treated as incomplete and re-staged', function () {
+    $this->useIsolatedComposerHome();
+
+    $package = Package::parse('ugarit/pint');
+
+    // Fresh metadata would let a naive "already installed" check skip the broken dir.
+    Metadata::transaction(fn (Metadata $metadata) => $metadata->recordUpdate($package));
+    mkdir($package->installPath().'/vendor', 0755, true);
+
+    $calls = [];
+    fakeComposer($calls);
+
+    $package->installOrUpdatePackage();
+
+    expect(file_exists($package->installPath().'/vendor/autoload.php'))->toBeTrue();
+});

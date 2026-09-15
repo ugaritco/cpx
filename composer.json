@@ -1,0 +1,102 @@
+{
+    "name": "cpx/cpx",
+    "description": "Run any command from any composer package, even if it's not installed in your project.",
+    "type": "project",
+    "license": "MIT",
+    "keywords": [
+        "composer",
+        "command",
+        "package",
+        "run"
+    ],
+    "support": {
+        "issues": "https://github.com/ugarit/cpx/issues",
+        "source": "https://github.com/ugarit/cpx",
+        "docs": "https://cpx.dev"
+    },
+    "authors": [
+        {
+            "name": "Muath R Abu Ouda",
+            "email": "muathrabuouda@hotmail.com",
+            "role": "Vision Leader of Ugarit"
+        },
+        {
+            "name": "Taylor Otwell",
+            "email": "taylor@laravel.com",
+            "role": "Original Creator & Primary Developer"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Cpx\\": "src/"
+        },
+        "files": [
+            "src/functions.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        },
+        "files": [
+            "tests/Support/FilesystemFakes.php"
+        ]
+    },
+    "require": {
+        "php": "^8.3"
+    },
+    "require-dev": {
+        "composer/composer": "^2.8",
+        "composer/semver": "^3.4",
+        "ugarit/agent-detector": "^1.00.00",
+        "ugarit/pao": "^1.00.00",
+        "ugarit/pint": "^1.00.00",
+        "ugarit/prompts": "^1.00.00",
+        "mockery/mockery": "^1.6",
+        "pestphp/pest": "^4.7",
+        "pestphp/pest-plugin-type-coverage": "^4.0",
+        "phpstan/phpstan": "^2.2",
+        "symfony/console": "^7.4|^8.0",
+        "symfony/process": "^7.4|^8.0"
+    },
+    "bin": [
+        "builds/cpx"
+    ],
+    "scripts": {
+        "analyse": [
+            "phpstan analyse"
+        ],
+        "build": [
+            "bash scripts/build.sh"
+        ],
+        "lint": [
+            "pint --parallel"
+        ],
+        "lint:check": [
+            "pint --parallel --test"
+        ],
+        "test:types": [
+            "pest --type-coverage --min=100"
+        ],
+        "test:unit": [
+            "pest --parallel"
+        ],
+        "test": [
+            "@analyse",
+            "@lint:check",
+            "@test:types",
+            "@test:unit"
+        ]
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        },
+        "optimize-autoloader": true,
+        "platform": {
+            "php": "8.3.0"
+        },
+        "sort-packages": true
+    },
+    "version": "1.00.00"
+}

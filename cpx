@@ -1,0 +1,10 @@
+#! /usr/bin/env php
+<?php
+
+use Cpx\Application;
+
+require file_exists(__DIR__ . '/vendor/autoload.php')
+    ? __DIR__ . '/vendor/autoload.php'
+    : __DIR__ . '/../../autoload.php';
+
+exit((new Application)->run());

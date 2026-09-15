@@ -1,0 +1,93 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Cpx\Commands;
+
+use Cpx\Commands\Concerns\OutputsJson;
+use Cpx\Packages\UserAliases;
+use Cpx\Support\Result;
+use InvalidArgumentException;
+use Ugarit\Prompts\Exceptions\NonInteractiveValidationException;
+use Symfony\Component\Console\Attribute\AsCommand;
+use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
+
+use function Ugarit\Prompts\info;
+use function Ugarit\Prompts\select;
+
+#[AsCommand(
+    name: 'unalias',
+    description: 'Remove a user-defined alias',
+)]
+class UnaliasCommand extends Command
+{
+    use OutputsJson;
+
+    protected function configure(): void
+    {
+        $this->addArgument('name', InputArgument::OPTIONAL, 'The alias name to remove');
+        $this->addJsonOption();
+    }
+
+    protected function execute(InputInterface $input, OutputInterface $output): int
+    {
+        $json = $this->wantsJson($input);
+        $aliases = UserAliases::open();
+
+        if (! $json && $aliases->all() === [] && $input->getArgument('name') === null) {
+            info('You have no aliases to remove.');
+
+            return self::SUCCESS;
+        }
+
+        try {
+            $name = $this->resolveName($input, $aliases);
+        } catch (InvalidArgumentException|NonInteractiveValidationException $e) {
+            return Result::failure($output, $e->getMessage());
+        }
+
+        $aliases->remove($name)->save();
+
+        if ($json) {
+            return Result::success($output, ['removed' => $name]);
+        }
+
+        info("Alias \"{$name}\" removed.");
+
+        return self::SUCCESS;
+    }
+
+    private function resolveName(InputInterface $input, UserAliases $aliases): string
+    {
+        if ($name = $input->getArgument('name')) {
+            if ($error = $this->validateName($name, $aliases)) {
+                throw new InvalidArgumentException($error);
+            }
+
+            return $name;
+        }
+
+        if ($aliases->all() === []) {
+            throw new InvalidArgumentException('An alias name must be provided.');
+        }
+
+        return (string) select(
+            label: 'Which alias would you like to remove?',
+            options: array_keys($aliases->all()),
+            required: 'An alias name must be provided.',
+            info: fn (string $name): string => (string) $aliases->find($name),
+        );
+    }
+
+    private function validateName(string $name, UserAliases $aliases): ?string
+    {
+        if (! $aliases->has($name)) {
+            return "No alias named \"{$name}\" was found.";
+        }
+
+        return null;
+    }
+}
